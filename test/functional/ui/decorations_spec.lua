@@ -8032,6 +8032,49 @@ if (h->n_buckets < new_n_buckets) { // expand
     })
   end)
 
+  it('redraws after removing the last virtual line above the topline #42764', function()
+    command('set noshowmode')
+    api.nvim_buf_set_lines(0, 0, -1, false, { 'First', '', '', 'Second' })
+    exec_lua(function(namespace)
+      local function decorate()
+        vim.api.nvim_buf_clear_namespace(0, namespace, 0, -1)
+        if vim.api.nvim_get_current_line() ~= '' then
+          vim.api.nvim_buf_set_extmark(0, namespace, 0, 0, {
+            virt_lines_above = true,
+            virt_lines = { { { 'HEADER' } } },
+          })
+        end
+        vim.api.nvim_buf_set_extmark(0, namespace, 2, 0, { virt_text = { { 'VIRTUAL' } } })
+      end
+      vim.api.nvim_create_autocmd({ 'TextChangedI', 'InsertLeave' }, { callback = decorate })
+      decorate()
+      local view = vim.fn.winsaveview()
+      view.topfill = 1
+      vim.fn.winrestview(view)
+    end, ns)
+    screen:expect([[
+      HEADER                                            |
+      ^First                                             |
+                                                        |
+       VIRTUAL                                          |
+      Second                                            |
+      {1:~                                                 }|*6
+                                                        |
+    ]])
+    local grid = [[
+      ^                                                  |
+                                                        |
+       VIRTUAL                                          |
+      Second                                            |
+      {1:~                                                 }|*7
+                                                        |
+    ]]
+    feed('C')
+    screen:expect(grid)
+    feed('<Esc>')
+    screen:expect({ grid = grid, unchanged = true })
+  end)
+
   it("not revealed before skipcol scrolling up with 'smoothscroll'", function()
     api.nvim_set_option_value('smoothscroll', true, {})
     api.nvim_buf_set_lines(0, 0, -1, false, { ('x'):rep(screen._width * 2) })

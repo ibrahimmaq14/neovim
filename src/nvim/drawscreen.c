@@ -1855,9 +1855,9 @@ static void win_update(win_T *wp)
             }
           }
 
-          // Correct the first entry for filler lines at the top
-          // when it won't get updated below.
-          if (win_may_fill(wp) && bot_start > 0) {
+          // Correct the first entry for filler lines at the top, even if
+          // the last filler line was removed.
+          if (bot_start > 0 && (wp->w_old_topfill > 0 || win_may_fill(wp))) {
             wp->w_lines[0].wl_size
               = (uint16_t)plines_correct_topline(wp, wp->w_topline, NULL, true, NULL);
           }
